@@ -10,6 +10,7 @@ const {
   loginSchema,
   changePasswordSchema,
   nameSchema,
+  forgotPasswordSchema,
 } = require('../utils/validators');
 
 const router = Router();
@@ -103,6 +104,25 @@ router.delete(
   '/me',
   authenticate(),
   authController.deleteAccount.bind(authController)
+);
+
+/**
+ * GET /forgot-password/:username
+ * Public — returns the security question key for the given username.
+ */
+router.get(
+  '/forgot-password/:username',
+  authController.getSecurityQuestion.bind(authController)
+);
+
+/**
+ * POST /forgot-password
+ * Public — verifies security answer and resets the password.
+ */
+router.post(
+  '/forgot-password',
+  validate(forgotPasswordSchema),
+  authController.resetPassword.bind(authController)
 );
 
 module.exports = router;

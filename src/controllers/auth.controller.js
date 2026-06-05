@@ -116,6 +116,32 @@ class AuthController {
       return sendError(res, err.status || 500, err.code || 'DELETE_ACCOUNT_ERROR', err.message);
     }
   }
+
+  /**
+   * GET /forgot-password/:username
+   * Public — returns the security question key for the given username.
+   */
+  async getSecurityQuestion(req, res) {
+    try {
+      const result = await authService.getSecurityQuestion(req.params.username);
+      return sendSuccess(res, 200, result);
+    } catch (err) {
+      return sendError(res, err.status || 500, err.code || 'FORGOT_ERROR', err.message);
+    }
+  }
+
+  /**
+   * POST /forgot-password
+   * Public — verifies security answer and resets the password.
+   */
+  async resetPassword(req, res) {
+    try {
+      const result = await authService.resetPassword(req.validatedBody);
+      return sendSuccess(res, 200, result);
+    } catch (err) {
+      return sendError(res, err.status || 500, err.code || 'RESET_ERROR', err.message);
+    }
+  }
 }
 
 module.exports = new AuthController();
