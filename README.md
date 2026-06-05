@@ -655,11 +655,38 @@ blog-api/
 ## Git History
 
 ```
-* (HEAD -> main) docs: update README with photo upload, name change and delete account endpoints
-* f80aa94 feat: add PUT /me/name and DELETE /me endpoints
-* 730ebb6 feat: add profile/cover photo upload endpoints and fix all tests
-* a1e24fa docs: update README with threading, edit/delete and profile endpoints
-* 1b4b680 feat: add comment threading, edit/delete endpoints and user profile
+*   27f691b (HEAD -> main) Merge develop into main
+|\
+| * cbd694a security: add Permissions-Policy header and Cache-Control no-store
+* |   8858966 Merge develop into main
+|\ \
+| |/
+| * 635e411 feat: password recovery via security questions
+* |   989a65b Merge branch 'develop'
+|\ \
+| |/
+| * d13e767 test: add coverage for PUT /me/photo, PUT /me/cover, PUT /me/name and DELETE /me
+* |   a119844 Merge branch 'develop'
+|\ \
+| |/
+| * c19e98d docs: update README with photo upload, name change and delete account endpoints
+* |   b18048d Merge branch 'develop'
+|\ \
+| |/
+| * f80aa94 feat: add PUT /me/name and DELETE /me endpoints
+* |   e7eb477 Merge branch 'develop'
+|\ \
+| |/
+| * 730ebb6 feat: add profile/cover photo upload endpoints and fix all tests
+* |   a3d75a9 merge: develop -> main (README update)
+|\ \
+| |/
+| * a1e24fa docs: update README with threading, edit/delete and profile endpoints
+* |   0e8ee27 merge: develop -> main (threading, edit/delete, profile page)
+|\ \
+| |/
+| * 1b4b680 feat: add comment threading, edit/delete endpoints and user profile
+|/
 * 8fd2064 feat: convert uploaded images to WebP with sharp
 * 0db2605 fix: set Cross-Origin-Resource-Policy: cross-origin for /uploads
 * 3f5c5f1 docs: add comprehensive README with API reference and setup instructions
