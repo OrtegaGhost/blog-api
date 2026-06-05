@@ -7,10 +7,11 @@ const bcrypt = require('bcryptjs');
 // Mock the database module before importing the app
 jest.mock('../src/config/db', () => ({
   user: {
-    findFirst: jest.fn(),
+    findFirst:  jest.fn(),
     findUnique: jest.fn(),
-    create: jest.fn(),
-    update: jest.fn(),
+    create:     jest.fn(),
+    update:     jest.fn(),
+    delete:     jest.fn(),
   },
 }));
 
@@ -246,6 +247,227 @@ describe('PUT /change-password', () => {
       .put('/change-password')
       .set('Authorization', 'Bearer invalid.token.here')
       .send({ current_password: 'OldPassword1', new_password: 'NewPassword1' });
+
+    expect(res.status).toBe(401);
+    expect(res.body).toHaveProperty('error', 'INVALID_TOKEN');
+  });
+});
+
+// ─── PUT /me/photo ────────────────────────────────────────────────────────────
+describe('PUT /me/photo', () => {
+  const mockUser = {
+    id: 'user-uuid-123',
+    name: 'John Doe',
+    email: 'john@example.com',
+    username: 'testuser',
+    profilePhoto: '/uploads/new-photo.webp',
+    coverPhoto: null,
+    createdAt: new Date(),
+  };
+
+  it('200 — updates profile photo with valid file', async () => {
+    prisma.user.update.mockResolvedValue(mockUser);
+
+    const res = await request(app)
+      .put('/me/photo')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .attach('photo', Buffer.from('fake-image'), {
+        filename: 'photo.jpg',
+        contentType: 'image/jpeg',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('profilePhoto');
+  });
+
+  it('400 — returns error when no file is attached', async () => {
+    const res = await request(app)
+      .put('/me/photo')
+      .set('Authorization', `Bearer ${makeToken()}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error', 'MISSING_FILE');
+  });
+
+  it('403 — returns error when Authorization header is absent', async () => {
+    const res = await request(app).put('/me/photo');
+
+    expect(res.status).toBe(403);
+    expect(res.body).toHaveProperty('error', 'FORBIDDEN');
+  });
+
+  it('401 — returns error with invalid token', async () => {
+    const res = await request(app)
+      .put('/me/photo')
+      .set('Authorization', 'Bearer invalid.token.here')
+      .attach('photo', Buffer.from('fake-image'), {
+        filename: 'photo.jpg',
+        contentType: 'image/jpeg',
+      });
+
+    expect(res.status).toBe(401);
+    expect(res.body).toHaveProperty('error', 'INVALID_TOKEN');
+  });
+});
+
+// ─── PUT /me/cover ────────────────────────────────────────────────────────────
+describe('PUT /me/cover', () => {
+  const mockUser = {
+    id: 'user-uuid-123',
+    name: 'John Doe',
+    email: 'john@example.com',
+    username: 'testuser',
+    profilePhoto: null,
+    coverPhoto: '/uploads/new-cover.webp',
+    createdAt: new Date(),
+  };
+
+  it('200 — updates cover photo with valid file', async () => {
+    prisma.user.update.mockResolvedValue(mockUser);
+
+    const res = await request(app)
+      .put('/me/cover')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .attach('cover', Buffer.from('fake-image'), {
+        filename: 'cover.jpg',
+        contentType: 'image/jpeg',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('coverPhoto');
+  });
+
+  it('400 — returns error when no file is attached', async () => {
+    const res = await request(app)
+      .put('/me/cover')
+      .set('Authorization', `Bearer ${makeToken()}`);
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error', 'MISSING_FILE');
+  });
+
+  it('403 — returns error when Authorization header is absent', async () => {
+    const res = await request(app).put('/me/cover');
+
+    expect(res.status).toBe(403);
+    expect(res.body).toHaveProperty('error', 'FORBIDDEN');
+  });
+
+  it('401 — returns error with invalid token', async () => {
+    const res = await request(app)
+      .put('/me/cover')
+      .set('Authorization', 'Bearer invalid.token.here')
+      .attach('cover', Buffer.from('fake-image'), {
+        filename: 'cover.jpg',
+        contentType: 'image/jpeg',
+      });
+
+    expect(res.status).toBe(401);
+    expect(res.body).toHaveProperty('error', 'INVALID_TOKEN');
+  });
+});
+
+// ─── PUT /me/name ─────────────────────────────────────────────────────────────
+describe('PUT /me/name', () => {
+  const mockUser = {
+    id: 'user-uuid-123',
+    name: 'Jane Doe',
+    email: 'john@example.com',
+    username: 'testuser',
+    profilePhoto: null,
+    coverPhoto: null,
+    createdAt: new Date(),
+  };
+
+  it('200 — updates name with valid data', async () => {
+    prisma.user.update.mockResolvedValue(mockUser);
+
+    const res = await request(app)
+      .put('/me/name')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({ name: 'Jane Doe' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('name', 'Jane Doe');
+  });
+
+  it('400 — returns error when name contains numbers', async () => {
+    const res = await request(app)
+      .put('/me/name')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({ name: 'Jane123' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error', 'VALIDATION_ERROR');
+  });
+
+  it('400 — returns error when name is too short', async () => {
+    const res = await request(app)
+      .put('/me/name')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({ name: 'J' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error', 'VALIDATION_ERROR');
+  });
+
+  it('400 — returns error when name is missing', async () => {
+    const res = await request(app)
+      .put('/me/name')
+      .set('Authorization', `Bearer ${makeToken()}`)
+      .send({});
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error', 'VALIDATION_ERROR');
+  });
+
+  it('403 — returns error when Authorization header is absent', async () => {
+    const res = await request(app)
+      .put('/me/name')
+      .send({ name: 'Jane Doe' });
+
+    expect(res.status).toBe(403);
+    expect(res.body).toHaveProperty('error', 'FORBIDDEN');
+  });
+
+  it('401 — returns error with invalid token', async () => {
+    const res = await request(app)
+      .put('/me/name')
+      .set('Authorization', 'Bearer invalid.token.here')
+      .send({ name: 'Jane Doe' });
+
+    expect(res.status).toBe(401);
+    expect(res.body).toHaveProperty('error', 'INVALID_TOKEN');
+  });
+});
+
+// ─── DELETE /me ───────────────────────────────────────────────────────────────
+describe('DELETE /me', () => {
+  it('200 — deletes account with valid token', async () => {
+    prisma.user.delete.mockResolvedValue({});
+
+    const res = await request(app)
+      .delete('/me')
+      .set('Authorization', `Bearer ${makeToken()}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('message');
+    expect(prisma.user.delete).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 'user-uuid-123' } })
+    );
+  });
+
+  it('403 — returns error when Authorization header is absent', async () => {
+    const res = await request(app).delete('/me');
+
+    expect(res.status).toBe(403);
+    expect(res.body).toHaveProperty('error', 'FORBIDDEN');
+  });
+
+  it('401 — returns error with invalid token', async () => {
+    const res = await request(app)
+      .delete('/me')
+      .set('Authorization', 'Bearer invalid.token.here');
 
     expect(res.status).toBe(401);
     expect(res.body).toHaveProperty('error', 'INVALID_TOKEN');
