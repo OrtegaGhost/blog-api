@@ -23,6 +23,7 @@ class UsersService {
         name: true,
         username: true,
         profilePhoto: true,
+        coverPhoto: true,
         createdAt: true,
       },
     });

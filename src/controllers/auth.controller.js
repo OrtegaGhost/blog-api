@@ -59,6 +59,26 @@ class AuthController {
    * Requires Authorization: Bearer <token>
    * Expects JSON body: { current_password, new_password }
    */
+  async updateProfilePhoto(req, res) {
+    if (!req.file) return sendError(res, 400, 'MISSING_FILE', 'Photo file is required');
+    try {
+      const user = await authService.updateProfilePhoto(req.user.sub, req.file.filename);
+      return sendSuccess(res, 200, user);
+    } catch (err) {
+      return sendError(res, err.status || 500, err.code || 'UPDATE_PHOTO_ERROR', err.message);
+    }
+  }
+
+  async updateCoverPhoto(req, res) {
+    if (!req.file) return sendError(res, 400, 'MISSING_FILE', 'Cover photo file is required');
+    try {
+      const user = await authService.updateCoverPhoto(req.user.sub, req.file.filename);
+      return sendSuccess(res, 200, user);
+    } catch (err) {
+      return sendError(res, err.status || 500, err.code || 'UPDATE_COVER_ERROR', err.message);
+    }
+  }
+
   async changePassword(req, res) {
     try {
       const result = await authService.changePassword(
