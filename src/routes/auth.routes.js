@@ -3,7 +3,7 @@
 const { Router } = require('express');
 const { authenticate } = require('../middlewares/auth.middleware');
 const { validate } = require('../middlewares/validate.middleware');
-const { upload } = require('../middlewares/upload.middleware');
+const { upload, processImage } = require('../middlewares/upload.middleware');
 const authController = require('../controllers/auth.controller');
 const {
   registerSchema,
@@ -21,6 +21,7 @@ const router = Router();
 router.post(
   '/register',
   upload.single('profilePhoto'),
+  processImage,
   validate(registerSchema),
   authController.register.bind(authController)
 );

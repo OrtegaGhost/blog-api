@@ -1,11 +1,13 @@
 'use strict';
 
 const multer = require('multer');
-const path = require('path');
+const path   = require('path');
 const crypto = require('crypto');
-const env = require('../config/env');
+const sharp  = require('sharp');
+const fs     = require('fs');
+const env    = require('../config/env');
 
-/** Allowed MIME types for profile photos */
+// Tipos MIME aceptados en la validacion inicial (antes de convertir a WebP)
 const ALLOWED_MIME_TYPES = new Set([
   'image/jpeg',
   'image/png',
@@ -13,31 +15,15 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/webp',
 ]);
 
-/**
- * Disk storage configuration.
- * Files are saved with a cryptographically random name to prevent
- * path traversal and filename collision attacks.
- */
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, env.UPLOAD_DIR);
-  },
-  filename: (_req, file, cb) => {
-    const randomName = crypto.randomBytes(16).toString('hex');
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `${randomName}${ext}`);
-  },
-});
+// Guarda el archivo en memoria para procesarlo con sharp antes de escribir a disco
+const storage = multer.memoryStorage();
 
-/**
- * Rejects files that are not images.
- * Using a Set for O(1) lookup instead of iterating an array.
- */
+// Rechaza archivos que no sean imagenes validas
 const fileFilter = (_req, file, cb) => {
   if (ALLOWED_MIME_TYPES.has(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('INVALID_FILE_TYPE: Only image files are allowed'));
+    cb(new Error('INVALID_FILE_TYPE: Solo se permiten archivos de imagen'));
   }
 };
 
@@ -49,4 +35,37 @@ const upload = multer({
   },
 });
 
-module.exports = { upload };
+/**
+ * Convierte el archivo cargado a formato WebP y lo guarda en disco.
+ * Debe ejecutarse despues de upload.single() y antes del controlador.
+ * Reduce el peso del archivo entre un 30-70% respecto a JPEG/PNG.
+ */
+const processImage = async (req, res, next) => {
+  if (!req.file) return next();
+
+  try {
+    const filename = `${crypto.randomBytes(16).toString('hex')}.webp`;
+    const filepath = path.join(env.UPLOAD_DIR, filename);
+
+    // Asegura que el directorio de destino exista
+    if (!fs.existsSync(env.UPLOAD_DIR)) {
+      fs.mkdirSync(env.UPLOAD_DIR, { recursive: true });
+    }
+
+    await sharp(req.file.buffer)
+      .resize({ width: 400, height: 400, fit: 'cover', position: 'centre' })
+      .webp({ quality: 82 })
+      .toFile(filepath);
+
+    // Actualiza req.file para que el controlador use los valores correctos
+    req.file.filename = filename;
+    req.file.path     = filepath;
+    req.file.mimetype = 'image/webp';
+
+    next();
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { upload, processImage };
