@@ -311,7 +311,7 @@ Updates the authenticated user's password.
 
 ### `GET /feed`
 
-Returns all comments ordered by most recent first.
+Returns root-level comments ordered by most recent first. Each comment includes its nested replies.
 
 **Responses:**
 
@@ -333,8 +333,17 @@ Returns all comments ordered by most recent first.
         "id": "user-uuid",
         "username": "johndoe",
         "name": "John Doe",
-        "profilePhoto": "/uploads/abc123.jpg"
-      }
+        "profilePhoto": "/uploads/abc123.webp"
+      },
+      "replies": [
+        {
+          "id": "reply-uuid",
+          "content": "This is a reply",
+          "parentId": "550e8400-e29b-41d4-a716-446655440000",
+          "createdAt": "2026-06-04T00:01:00.000Z",
+          "user": { "..." }
+        }
+      ]
     }
   ],
   "total": 1
@@ -345,12 +354,13 @@ Returns all comments ordered by most recent first.
 
 ### `POST /feed`
 
-Creates a new comment. Broadcasts it in real time via Socket.io (`comment:new` event).
+Creates a root comment or a reply. Broadcasts via Socket.io (`comment:new`).
 
 ```json
 // Request body
 {
-  "content": "This is a new comment"
+  "content": "This is a new comment",
+  "parentId": "optional-uuid-of-parent-comment"
 }
 ```
 
@@ -367,7 +377,75 @@ Creates a new comment. Broadcasts it in real time via Socket.io (`comment:new` e
 // 200
 {
   "message": "Comment created successfully",
-  "comment": { ... }
+  "comment": { "id": "...", "content": "...", "parentId": null, "..." }
+}
+```
+
+---
+
+### `PUT /feed/:id`
+
+Edits the content of a comment. Only the author can edit their own comments.
+
+```json
+// Request body
+{
+  "content": "Updated content"
+}
+```
+
+**Responses:**
+
+| Status | Condition |
+|---|---|
+| `200` | Comment updated — emits `comment:updated` via Socket.io |
+| `400` | Empty or missing content |
+| `401` | Invalid or expired token |
+| `403` | Missing `Authorization` header or not the author |
+| `404` | Comment not found |
+
+---
+
+### `DELETE /feed/:id`
+
+Deletes a comment and all its replies (cascade). Only the author can delete their own comments.
+
+**Responses:**
+
+| Status | Condition |
+|---|---|
+| `200` | Comment deleted — emits `comment:deleted` via Socket.io |
+| `401` | Invalid or expired token |
+| `403` | Missing `Authorization` header or not the author |
+| `404` | Comment not found |
+
+---
+
+### `GET /users/:username`
+
+Returns the public profile and root-level comments of any user.
+
+**Responses:**
+
+| Status | Condition |
+|---|---|
+| `200` | User found |
+| `401` | Invalid or expired token |
+| `403` | Missing `Authorization` header |
+| `404` | Username not found |
+
+```json
+// 200
+{
+  "user": {
+    "id": "user-uuid",
+    "name": "John Doe",
+    "username": "johndoe",
+    "profilePhoto": "/uploads/abc123.webp",
+    "createdAt": "2026-06-04T00:00:00.000Z"
+  },
+  "comments": [ { "..." } ],
+  "total": 3
 }
 ```
 
@@ -379,7 +457,9 @@ Connect to `ws://localhost:3000` and listen for:
 
 | Event | Payload | Description |
 |---|---|---|
-| `comment:new` | Comment object | Emitted when any user creates a comment |
+| `comment:new` | Comment object (with `parentId`) | Emitted when any user creates a comment or reply |
+| `comment:updated` | `{ id, content, parentId, updatedAt, user }` | Emitted when the author edits a comment |
+| `comment:deleted` | `{ id, parentId }` | Emitted when the author deletes a comment |
 
 ---
 
@@ -446,7 +526,7 @@ npm run snyk:test
 blog-api/
 ├── prisma/
 │   ├── migrations/          # Auto-generated migration files
-│   ├── schema.prisma        # Database schema (User + Comment models)
+│   ├── schema.prisma        # Database schema (User + Comment with parentId)
 │   └── seed.js              # Optional seed data
 ├── src/
 │   ├── config/
@@ -454,25 +534,28 @@ blog-api/
 │   │   └── env.js           # Environment variable validation (Zod)
 │   ├── controllers/
 │   │   ├── auth.controller.js
-│   │   └── feed.controller.js
+│   │   ├── feed.controller.js   # getComments, createComment, updateComment, deleteComment
+│   │   └── users.controller.js  # getUserProfile
 │   ├── middlewares/
 │   │   ├── auth.middleware.js     # JWT factory (configurable missing-token status)
 │   │   ├── error.middleware.js    # Global error handler
-│   │   ├── upload.middleware.js   # Multer configuration
+│   │   ├── upload.middleware.js   # Multer + sharp WebP conversion
 │   │   └── validate.middleware.js # Zod request body validation
 │   ├── routes/
 │   │   ├── auth.routes.js
-│   │   ├── feed.routes.js
+│   │   ├── feed.routes.js         # GET / POST / PUT /:id / DELETE /:id
+│   │   ├── users.routes.js        # GET /:username
 │   │   └── index.js
 │   ├── services/
-│   │   ├── auth.service.js  # register, login, getProfile, changePassword
-│   │   └── feed.service.js  # getComments, createComment + Socket.io emit
+│   │   ├── auth.service.js        # register, login, getProfile, changePassword
+│   │   ├── feed.service.js        # getComments, createComment, updateComment, deleteComment
+│   │   └── users.service.js       # getUserProfile
 │   ├── sockets/
-│   │   └── index.js         # Socket.io singleton (init / getIO)
+│   │   └── index.js               # Socket.io singleton (init / getIO)
 │   ├── utils/
-│   │   ├── response.js      # sendSuccess / sendError helpers
-│   │   └── validators.js    # Zod schemas for all endpoints
-│   └── app.js               # Express app (middleware + routes)
+│   │   ├── response.js            # sendSuccess / sendError helpers
+│   │   └── validators.js          # Zod schemas for all endpoints
+│   └── app.js                     # Express app (middleware + routes)
 ├── tests/
 │   ├── setup.js             # Test environment variables
 │   ├── auth.test.js         # Auth endpoint tests
@@ -489,7 +572,11 @@ blog-api/
 ## Git History
 
 ```
-* 0db2605 (HEAD -> develop, origin/main, origin/develop, main) fix: set Cross-Origin-Resource-Policy: cross-origin for /uploads
+* 0e8ee27 (HEAD -> main, origin/main) merge: develop → main (threading, edit/delete, profile page)
+* 1b4b680 feat: add comment threading, edit/delete endpoints and user profile
+* 8fd2064 feat: convert uploaded images to WebP with sharp
+* 1be1c4a docs: update README with CORP fix and git history
+* 0db2605 fix: set Cross-Origin-Resource-Policy: cross-origin for /uploads
 * 9d2b0a1 docs: update git history in README
 * 128bc5f fix: switch Prisma generator to prisma-client-js for CJS compatibility
 * 3f5c5f1 docs: add comprehensive README with API reference and setup instructions
