@@ -426,7 +426,7 @@ This API was designed following **OWASP TOP TEN 2025** and **OWASP ASVS Level 2*
 | Cryptographic Failures | bcrypt (12 rounds) + JWT HS256 with 32+ char secret |
 | Injection | Prisma ORM with parameterized queries (no raw SQL) |
 | Insecure Design | Rate limiting on `/login` (10 req/15 min) and `/register` (5 req/h) |
-| Security Misconfiguration | Helmet HTTP headers + CORS allowlist |
+| Security Misconfiguration | Helmet HTTP headers + CORS allowlist + `Cross-Origin-Resource-Policy: cross-origin` on `/uploads` |
 | Vulnerable Components | Snyk analysis — 0 known vulnerabilities |
 | Auth Failures | Constant-time password comparison to prevent timing attacks |
 | Data Integrity | Zod validation on every request body |
@@ -489,7 +489,9 @@ blog-api/
 ## Git History
 
 ```
-* 128bc5f (HEAD -> develop, origin/main, origin/develop, main) fix: switch Prisma generator to prisma-client-js for CJS compatibility
+* 0db2605 (HEAD -> develop, origin/main, origin/develop, main) fix: set Cross-Origin-Resource-Policy: cross-origin for /uploads
+* 9d2b0a1 docs: update git history in README
+* 128bc5f fix: switch Prisma generator to prisma-client-js for CJS compatibility
 * 3f5c5f1 docs: add comprehensive README with API reference and setup instructions
 * db5ed54 test: add Jest + Supertest suite covering all API scenarios
 * 839c185 feat: initial backend setup with full API implementation
@@ -516,6 +518,7 @@ The developer acted as **tech lead and architect**. Claude Code (claude-sonnet-4
 | Architecture design | Approved all structural decisions | Proposed folder structure and patterns |
 | Code generation | Reviewed every file before acceptance | Generated code following defined standards |
 | Security hardening | Validated OWASP compliance | Implemented Helmet, rate limiting, Zod validation |
+| Bug fixes | Identified CORP header blocking cross-origin images | Overrode Helmet's CORP header for `/uploads` route |
 | Testing | Defined coverage requirements | Generated test cases per the spec scenarios |
 | Documentation | Reviewed and approved this README | Generated initial draft |
 
