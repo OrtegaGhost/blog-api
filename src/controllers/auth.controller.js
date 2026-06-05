@@ -90,6 +90,32 @@ class AuthController {
       return sendError(res, err.status || 500, err.code || 'CHANGE_PASSWORD_ERROR', err.message);
     }
   }
+
+  /**
+   * PUT /me/name
+   * Actualiza el nombre del usuario autenticado.
+   */
+  async updateName(req, res) {
+    try {
+      const user = await authService.updateName(req.user.sub, req.validatedBody.name);
+      return sendSuccess(res, 200, user);
+    } catch (err) {
+      return sendError(res, err.status || 500, err.code || 'UPDATE_NAME_ERROR', err.message);
+    }
+  }
+
+  /**
+   * DELETE /me
+   * Elimina la cuenta del usuario autenticado y todas sus publicaciones.
+   */
+  async deleteAccount(req, res) {
+    try {
+      await authService.deleteAccount(req.user.sub);
+      return sendSuccess(res, 200, { message: 'Account deleted successfully' });
+    } catch (err) {
+      return sendError(res, err.status || 500, err.code || 'DELETE_ACCOUNT_ERROR', err.message);
+    }
+  }
 }
 
 module.exports = new AuthController();
