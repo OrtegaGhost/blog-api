@@ -126,6 +126,8 @@ describe('POST /register', () => {
       .field('email', 'john@example.com')
       .field('username', 'johndoe')
       .field('password', 'Password1')
+      .field('securityQuestion', 'q0')
+      .field('securityAnswer', 'Firulais')
       .attach('profilePhoto', Buffer.from('fake-image'), {
         filename: 'photo.jpg',
         contentType: 'image/jpeg',
@@ -142,6 +144,8 @@ describe('POST /register', () => {
       .field('email', 'john@example.com')
       .field('username', 'johndoe')
       .field('password', 'Password1')
+      .field('securityQuestion', 'q0')
+      .field('securityAnswer', 'Firulais')
       .attach('profilePhoto', Buffer.from('fake-image'), {
         filename: 'photo.jpg',
         contentType: 'image/jpeg',
@@ -158,6 +162,26 @@ describe('POST /register', () => {
       .field('email', 'not-an-email')
       .field('username', 'johndoe')
       .field('password', 'Password1')
+      .field('securityQuestion', 'q0')
+      .field('securityAnswer', 'Firulais')
+      .attach('profilePhoto', Buffer.from('fake-image'), {
+        filename: 'photo.jpg',
+        contentType: 'image/jpeg',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error', 'VALIDATION_ERROR');
+  });
+
+  it('400 — returns error when security question is invalid', async () => {
+    const res = await request(app)
+      .post('/register')
+      .field('name', 'John Doe')
+      .field('email', 'john@example.com')
+      .field('username', 'johndoe')
+      .field('password', 'Password1')
+      .field('securityQuestion', 'invalid_key')
+      .field('securityAnswer', 'Firulais')
       .attach('profilePhoto', Buffer.from('fake-image'), {
         filename: 'photo.jpg',
         contentType: 'image/jpeg',
@@ -471,5 +495,82 @@ describe('DELETE /me', () => {
 
     expect(res.status).toBe(401);
     expect(res.body).toHaveProperty('error', 'INVALID_TOKEN');
+  });
+});
+
+// ─── GET /forgot-password/:username ──────────────────────────────────────────
+describe('GET /forgot-password/:username', () => {
+  it('200 — returns question key for existing username', async () => {
+    prisma.user.findUnique.mockResolvedValue({
+      securityQuestion: 'q0',
+    });
+
+    const res = await request(app).get('/forgot-password/testuser');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('questionKey', 'q0');
+  });
+
+  it('404 — returns error when username does not exist', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    const res = await request(app).get('/forgot-password/nobody');
+
+    expect(res.status).toBe(404);
+    expect(res.body).toHaveProperty('error', 'USER_NOT_FOUND');
+  });
+});
+
+// ─── POST /forgot-password ────────────────────────────────────────────────────
+describe('POST /forgot-password', () => {
+  it('200 — resets password with correct answer', async () => {
+    const hashedAnswer = await require('bcryptjs').hash('firulais', 12);
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'user-uuid-123',
+      securityAnswer: hashedAnswer,
+    });
+    prisma.user.update.mockResolvedValue({});
+
+    const res = await request(app)
+      .post('/forgot-password')
+      .send({ username: 'testuser', securityAnswer: 'Firulais', newPassword: 'NewPass1' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('message');
+  });
+
+  it('400 — returns error when security answer is wrong', async () => {
+    const hashedAnswer = await require('bcryptjs').hash('firulais', 12);
+    prisma.user.findUnique.mockResolvedValue({
+      id: 'user-uuid-123',
+      securityAnswer: hashedAnswer,
+    });
+
+    const res = await request(app)
+      .post('/forgot-password')
+      .send({ username: 'testuser', securityAnswer: 'WrongAnswer', newPassword: 'NewPass1' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error', 'WRONG_SECURITY_ANSWER');
+  });
+
+  it('404 — returns error when username does not exist', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    const res = await request(app)
+      .post('/forgot-password')
+      .send({ username: 'nobody', securityAnswer: 'answer', newPassword: 'NewPass1' });
+
+    expect(res.status).toBe(404);
+    expect(res.body).toHaveProperty('error', 'USER_NOT_FOUND');
+  });
+
+  it('400 — returns error when newPassword fails validation', async () => {
+    const res = await request(app)
+      .post('/forgot-password')
+      .send({ username: 'testuser', securityAnswer: 'answer', newPassword: 'weak' });
+
+    expect(res.status).toBe(400);
+    expect(res.body).toHaveProperty('error', 'VALIDATION_ERROR');
   });
 });

@@ -11,11 +11,10 @@ const BCRYPT_ROUNDS = 12;
 class AuthService {
   /**
    * Registers a new user.
-   * @param {{ name: string, email: string, username: string, password: string, profilePhoto?: string }} data
+   * @param {{ name, email, username, password, profilePhoto, securityQuestion, securityAnswer }} data
    * @returns {Promise<{ message: string, redirect: string }>}
    */
-  async register({ name, email, username, password, profilePhoto }) {
-    // Check for duplicate email or username
+  async register({ name, email, username, password, profilePhoto, securityQuestion, securityAnswer }) {
     const existing = await prisma.user.findFirst({
       where: { OR: [{ email }, { username }] },
       select: { email: true, username: true },
@@ -29,7 +28,10 @@ class AuthService {
       throw error;
     }
 
-    const hashedPassword = await bcrypt.hash(password, BCRYPT_ROUNDS);
+    const [hashedPassword, hashedAnswer] = await Promise.all([
+      bcrypt.hash(password, BCRYPT_ROUNDS),
+      bcrypt.hash(securityAnswer.trim().toLowerCase(), BCRYPT_ROUNDS),
+    ]);
 
     await prisma.user.create({
       data: {
@@ -38,6 +40,8 @@ class AuthService {
         username,
         password: hashedPassword,
         profilePhoto: profilePhoto || null,
+        securityQuestion,
+        securityAnswer: hashedAnswer,
       },
     });
 
@@ -45,6 +49,66 @@ class AuthService {
       message: 'User registered successfully. Please log in.',
       redirect: '/login',
     };
+  }
+
+  /**
+   * Returns the security question key for a given username (public endpoint).
+   * @param {string} username
+   * @returns {Promise<{ questionKey: string }>}
+   */
+  async getSecurityQuestion(username) {
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: { securityQuestion: true },
+    });
+
+    if (!user) {
+      const error = new Error('User not found');
+      error.status = 404;
+      error.code = 'USER_NOT_FOUND';
+      throw error;
+    }
+
+    return { questionKey: user.securityQuestion };
+  }
+
+  /**
+   * Resets a user's password after verifying their security answer.
+   * @param {{ username: string, securityAnswer: string, newPassword: string }} data
+   * @returns {Promise<{ message: string }>}
+   */
+  async resetPassword({ username, securityAnswer, newPassword }) {
+    const user = await prisma.user.findUnique({
+      where: { username },
+      select: { id: true, securityAnswer: true },
+    });
+
+    if (!user) {
+      const error = new Error('User not found');
+      error.status = 404;
+      error.code = 'USER_NOT_FOUND';
+      throw error;
+    }
+
+    const isCorrect = await bcrypt.compare(
+      securityAnswer.trim().toLowerCase(),
+      user.securityAnswer
+    );
+
+    if (!isCorrect) {
+      const error = new Error('Incorrect security answer');
+      error.status = 400;
+      error.code = 'WRONG_SECURITY_ANSWER';
+      throw error;
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword },
+    });
+
+    return { message: 'Password reset successfully' };
   }
 
   /**

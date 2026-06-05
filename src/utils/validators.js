@@ -11,6 +11,9 @@ const passwordSchema = z
     'Password must contain at least one uppercase letter, one lowercase letter and one number'
   );
 
+/** Valid security-question keys — must match the frontend's I18n keys */
+const SECURITY_QUESTION_KEYS = ['q0', 'q1', 'q2', 'q3', 'q4'];
+
 /** Schema for POST /register */
 const registerSchema = z.object({
   name: z
@@ -30,6 +33,13 @@ const registerSchema = z.object({
       'Username can only contain letters, numbers and underscores'
     ),
   password: passwordSchema,
+  securityQuestion: z.enum(SECURITY_QUESTION_KEYS, {
+    errorMap: () => ({ message: 'Invalid security question' }),
+  }),
+  securityAnswer: z
+    .string()
+    .min(2, 'Security answer must be at least 2 characters')
+    .max(100, 'Security answer cannot exceed 100 characters'),
 });
 
 /** Schema for POST /login */
@@ -61,6 +71,13 @@ const editCommentSchema = z.object({
     .max(1000, 'Comment cannot exceed 1000 characters'),
 });
 
+/** Schema for POST /forgot-password */
+const forgotPasswordSchema = z.object({
+  username:       z.string().min(1, 'Username is required'),
+  securityAnswer: z.string().min(1, 'Security answer is required'),
+  newPassword:    passwordSchema,
+});
+
 /** Schema for PUT /me/name (cambiar nombre) */
 const nameSchema = z.object({
   name: z
@@ -80,4 +97,5 @@ module.exports = {
   commentSchema,
   editCommentSchema,
   nameSchema,
+  forgotPasswordSchema,
 };

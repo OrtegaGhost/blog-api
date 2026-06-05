@@ -17,9 +17,11 @@ model User {
   email        String    @unique
   username     String    @unique
   password     String
-  profilePhoto String?
-  coverPhoto   String?   @map("cover_photo")
-  createdAt    DateTime  @default(now()) @map("created_at")
+  profilePhoto     String?
+  coverPhoto       String?   @map("cover_photo")
+  securityQuestion String    @map("security_question")
+  securityAnswer   String    @map("security_answer")
+  createdAt        DateTime  @default(now()) @map("created_at")
   updatedAt    DateTime  @updatedAt @map("updated_at")
   comments     Comment[]
 
