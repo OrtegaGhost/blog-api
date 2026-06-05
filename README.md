@@ -442,10 +442,93 @@ Returns the public profile and root-level comments of any user.
     "name": "John Doe",
     "username": "johndoe",
     "profilePhoto": "/uploads/abc123.webp",
+    "coverPhoto": "/uploads/cover456.webp",
     "createdAt": "2026-06-04T00:00:00.000Z"
   },
   "comments": [ { "..." } ],
   "total": 3
+}
+```
+
+---
+
+### `PUT /me/photo`
+
+Replaces the authenticated user's profile photo. Accepts `multipart/form-data`.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `photo` | file | Yes | JPEG, PNG, GIF or WebP — max 5 MB |
+
+The image is converted to WebP (400×400 cover-crop, quality 82) before saving.
+
+**Responses:**
+
+| Status | Condition |
+|---|---|
+| `200` | Photo updated — returns full user profile |
+| `400` | Missing file |
+| `401` | Invalid or expired token |
+| `403` | Missing `Authorization` header |
+
+---
+
+### `PUT /me/cover`
+
+Replaces the authenticated user's cover photo. Accepts `multipart/form-data`.
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `cover` | file | Yes | JPEG, PNG, GIF or WebP — max 5 MB |
+
+**Responses:** same as `PUT /me/photo`.
+
+---
+
+### `PUT /me/name`
+
+Updates the authenticated user's display name.
+
+```json
+// Request body
+{
+  "name": "Jane Doe"
+}
+```
+
+| Constraint | Rule |
+|---|---|
+| Min length | 2 characters |
+| Max length | 60 characters |
+| Allowed chars | Letters, accented characters and spaces only |
+
+**Responses:**
+
+| Status | Condition |
+|---|---|
+| `200` | Name updated — returns full user profile |
+| `400` | Invalid name (numbers, special chars, too short/long) |
+| `401` | Invalid or expired token |
+| `403` | Missing `Authorization` header |
+
+---
+
+### `DELETE /me`
+
+Permanently deletes the authenticated user's account. All their comments and replies are removed via cascade.
+
+**Responses:**
+
+| Status | Condition |
+|---|---|
+| `200` | Account deleted |
+| `401` | Invalid or expired token |
+| `403` | Missing `Authorization` header |
+
+```json
+// 200
+{
+  "message": "Account deleted successfully"
 }
 ```
 
@@ -547,14 +630,14 @@ blog-api/
 │   │   ├── users.routes.js        # GET /:username
 │   │   └── index.js
 │   ├── services/
-│   │   ├── auth.service.js        # register, login, getProfile, changePassword
+│   │   ├── auth.service.js        # register, login, getProfile, changePassword, updateProfilePhoto, updateCoverPhoto, updateName, deleteAccount
 │   │   ├── feed.service.js        # getComments, createComment, updateComment, deleteComment
 │   │   └── users.service.js       # getUserProfile
 │   ├── sockets/
 │   │   └── index.js               # Socket.io singleton (init / getIO)
 │   ├── utils/
 │   │   ├── response.js            # sendSuccess / sendError helpers
-│   │   └── validators.js          # Zod schemas for all endpoints
+│   │   └── validators.js          # Zod schemas: register, login, changePassword, comment, editComment, name
 │   └── app.js                     # Express app (middleware + routes)
 ├── tests/
 │   ├── setup.js             # Test environment variables
@@ -572,13 +655,13 @@ blog-api/
 ## Git History
 
 ```
-* 0e8ee27 (HEAD -> main, origin/main) merge: develop → main (threading, edit/delete, profile page)
+* (HEAD -> main) docs: update README with photo upload, name change and delete account endpoints
+* f80aa94 feat: add PUT /me/name and DELETE /me endpoints
+* 730ebb6 feat: add profile/cover photo upload endpoints and fix all tests
+* a1e24fa docs: update README with threading, edit/delete and profile endpoints
 * 1b4b680 feat: add comment threading, edit/delete endpoints and user profile
 * 8fd2064 feat: convert uploaded images to WebP with sharp
-* 1be1c4a docs: update README with CORP fix and git history
 * 0db2605 fix: set Cross-Origin-Resource-Policy: cross-origin for /uploads
-* 9d2b0a1 docs: update git history in README
-* 128bc5f fix: switch Prisma generator to prisma-client-js for CJS compatibility
 * 3f5c5f1 docs: add comprehensive README with API reference and setup instructions
 * db5ed54 test: add Jest + Supertest suite covering all API scenarios
 * 839c185 feat: initial backend setup with full API implementation
