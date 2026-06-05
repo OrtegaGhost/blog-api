@@ -95,6 +95,7 @@ class AuthService {
         email: true,
         username: true,
         profilePhoto: true,
+        coverPhoto: true,
         createdAt: true,
       },
     });
@@ -155,6 +156,34 @@ class AuthService {
     });
 
     return { message: 'Password updated successfully' };
+  }
+
+  /**
+   * Actualiza la foto de perfil del usuario.
+   * @param {string} userId   - ID del usuario autenticado
+   * @param {string} filename - Nombre del archivo guardado en /uploads
+   * @returns {Promise<object>} Perfil actualizado
+   */
+  async updateProfilePhoto(userId, filename) {
+    return prisma.user.update({
+      where: { id: userId },
+      data:  { profilePhoto: `/uploads/${filename}` },
+      select: { id: true, name: true, email: true, username: true, profilePhoto: true, coverPhoto: true, createdAt: true },
+    });
+  }
+
+  /**
+   * Actualiza la foto de portada del usuario.
+   * @param {string} userId   - ID del usuario autenticado
+   * @param {string} filename - Nombre del archivo guardado en /uploads
+   * @returns {Promise<object>} Perfil actualizado
+   */
+  async updateCoverPhoto(userId, filename) {
+    return prisma.user.update({
+      where: { id: userId },
+      data:  { coverPhoto: `/uploads/${filename}` },
+      select: { id: true, name: true, email: true, username: true, profilePhoto: true, coverPhoto: true, createdAt: true },
+    });
   }
 }
 

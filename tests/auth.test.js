@@ -20,6 +20,13 @@ jest.mock('../src/sockets', () => ({
   getIO: jest.fn(),
 }));
 
+// Mock sharp para evitar que buffers de prueba fallen la conversion a WebP
+jest.mock('sharp', () => () => ({
+  resize: jest.fn().mockReturnThis(),
+  webp:   jest.fn().mockReturnThis(),
+  toFile: jest.fn().mockResolvedValue({}),
+}));
+
 const app = require('../src/app');
 const prisma = require('../src/config/db');
 

@@ -48,6 +48,30 @@ router.get(
 );
 
 /**
+ * PUT /me/photo
+ * Protected — reemplaza la foto de perfil del usuario autenticado.
+ */
+router.put(
+  '/me/photo',
+  authenticate(),
+  upload.single('photo'),
+  processImage,
+  authController.updateProfilePhoto.bind(authController)
+);
+
+/**
+ * PUT /me/cover
+ * Protected — reemplaza la foto de portada del usuario autenticado.
+ */
+router.put(
+  '/me/cover',
+  authenticate(),
+  upload.single('cover'),
+  processImage,
+  authController.updateCoverPhoto.bind(authController)
+);
+
+/**
  * PUT /change-password
  * Protected — updates the authenticated user's password.
  * Returns 403 when Authorization header is absent (per spec).
