@@ -489,6 +489,8 @@ blog-api/
 ## Git History
 
 ```
+* 128bc5f (HEAD -> develop, origin/main, origin/develop, main) fix: switch Prisma generator to prisma-client-js for CJS compatibility
+* 3f5c5f1 docs: add comprehensive README with API reference and setup instructions
 * db5ed54 test: add Jest + Supertest suite covering all API scenarios
 * 839c185 feat: initial backend setup with full API implementation
 ```
