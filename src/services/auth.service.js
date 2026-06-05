@@ -185,6 +185,29 @@ class AuthService {
       select: { id: true, name: true, email: true, username: true, profilePhoto: true, coverPhoto: true, createdAt: true },
     });
   }
+
+  /**
+   * Actualiza el nombre del usuario.
+   * @param {string} userId - ID del usuario autenticado
+   * @param {string} name   - Nuevo nombre
+   * @returns {Promise<object>} Perfil actualizado
+   */
+  async updateName(userId, name) {
+    return prisma.user.update({
+      where: { id: userId },
+      data:  { name },
+      select: { id: true, name: true, email: true, username: true, profilePhoto: true, coverPhoto: true, createdAt: true },
+    });
+  }
+
+  /**
+   * Elimina la cuenta del usuario y todas sus publicaciones (cascade).
+   * @param {string} userId - ID del usuario autenticado
+   * @returns {Promise<void>}
+   */
+  async deleteAccount(userId) {
+    await prisma.user.delete({ where: { id: userId } });
+  }
 }
 
 module.exports = new AuthService();

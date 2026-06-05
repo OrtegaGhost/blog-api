@@ -9,6 +9,7 @@ const {
   registerSchema,
   loginSchema,
   changePasswordSchema,
+  nameSchema,
 } = require('../utils/validators');
 
 const router = Router();
@@ -81,6 +82,27 @@ router.put(
   authenticate(),
   validate(changePasswordSchema),
   authController.changePassword.bind(authController)
+);
+
+/**
+ * PUT /me/name
+ * Protected — actualiza el nombre del usuario autenticado.
+ */
+router.put(
+  '/me/name',
+  authenticate(),
+  validate(nameSchema),
+  authController.updateName.bind(authController)
+);
+
+/**
+ * DELETE /me
+ * Protected — elimina la cuenta del usuario autenticado y sus publicaciones en cascade.
+ */
+router.delete(
+  '/me',
+  authenticate(),
+  authController.deleteAccount.bind(authController)
 );
 
 module.exports = router;

@@ -61,10 +61,23 @@ const editCommentSchema = z.object({
     .max(1000, 'Comment cannot exceed 1000 characters'),
 });
 
+/** Schema for PUT /me/name (cambiar nombre) */
+const nameSchema = z.object({
+  name: z
+    .string()
+    .min(2, 'Name must be at least 2 characters')
+    .max(60, 'Name cannot exceed 60 characters')
+    .regex(
+      /^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$/,
+      'Name cannot contain numbers or special characters'
+    ),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
   changePasswordSchema,
   commentSchema,
   editCommentSchema,
+  nameSchema,
 };
