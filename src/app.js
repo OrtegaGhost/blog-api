@@ -17,6 +17,21 @@ const app = express();
 // ── Security headers (OWASP A05) ──────────────────────────────────────────────
 app.use(helmet());
 
+// Permissions-Policy: restrict all browser features (not included in Helmet 8)
+app.use((_req, res, next) => {
+  res.setHeader(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()'
+  );
+  next();
+});
+
+// Prevent caching of API responses that may contain sensitive data
+app.use((_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
+
 // ── CORS ─────────────────────────────────────────────────────────────────────
 app.use(
   cors({
