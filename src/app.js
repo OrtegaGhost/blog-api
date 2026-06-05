@@ -61,8 +61,11 @@ app.use(express.json({ limit: '10kb' })); // Limit body size to prevent DoS
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
 // ── Static files — serve uploaded profile photos ──────────────────────────────
+// Override Helmet's Cross-Origin-Resource-Policy so browsers on a different
+// origin (e.g. localhost:5173) can load profile photo <img> tags.
 app.use(
   '/uploads',
+  (req, res, next) => { res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin'); next(); },
   express.static(path.join(__dirname, '..', process.env.UPLOAD_DIR || 'uploads'))
 );
 
