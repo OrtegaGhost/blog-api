@@ -142,7 +142,9 @@ class AuthService {
       { expiresIn: expirationSeconds, algorithm: 'HS256' }
     );
 
-    return { token_type: 'Bearer', expiration, access_token };
+    // expires_in follows RFC 6749 §5.1 (seconds until expiration)
+    // expiration is kept for backwards compatibility (Unix timestamp)
+    return { token_type: 'Bearer', expires_in: expirationSeconds, expiration, access_token };
   }
 
   /**
