@@ -1,8 +1,9 @@
 'use strict';
 
 const { Router } = require('express');
-const authRoutes = require('./auth.routes');
-const feedRoutes = require('./feed.routes');
+const authRoutes  = require('./auth.routes');
+const feedRoutes  = require('./feed.routes');
+const usersRoutes = require('./users.routes');
 
 const router = Router();
 
@@ -13,5 +14,6 @@ router.get('/health', (_req, res) => {
 
 router.use('/', authRoutes);
 router.use('/feed', feedRoutes);
+router.use('/users', usersRoutes);
 
 module.exports = router;

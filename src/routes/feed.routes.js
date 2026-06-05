@@ -4,7 +4,7 @@ const { Router } = require('express');
 const { authenticate } = require('../middlewares/auth.middleware');
 const { validate } = require('../middlewares/validate.middleware');
 const feedController = require('../controllers/feed.controller');
-const { commentSchema } = require('../utils/validators');
+const { commentSchema, editCommentSchema } = require('../utils/validators');
 
 const router = Router();
 
@@ -29,6 +29,27 @@ router.post(
   authenticate(),
   validate(commentSchema),
   feedController.createComment.bind(feedController)
+);
+
+/**
+ * PUT /feed/:id
+ * Protected — edita el contenido de un comentario propio.
+ */
+router.put(
+  '/:id',
+  authenticate(),
+  validate(editCommentSchema),
+  feedController.updateComment.bind(feedController)
+);
+
+/**
+ * DELETE /feed/:id
+ * Protected — elimina un comentario propio (y sus respuestas en cascada).
+ */
+router.delete(
+  '/:id',
+  authenticate(),
+  feedController.deleteComment.bind(feedController)
 );
 
 module.exports = router;
