@@ -23,11 +23,34 @@ class FeedController {
    * Requires Authorization: Bearer <token>
    * Expects JSON body: { content }
    */
+  async updateComment(req, res) {
+    try {
+      const result = await feedService.updateComment(
+        req.user.sub,
+        req.params.id,
+        req.validatedBody.content
+      );
+      return sendSuccess(res, 200, result);
+    } catch (err) {
+      return sendError(res, err.status || 500, err.code || 'UPDATE_COMMENT_ERROR', err.message);
+    }
+  }
+
+  async deleteComment(req, res) {
+    try {
+      const result = await feedService.deleteComment(req.user.sub, req.params.id);
+      return sendSuccess(res, 200, result);
+    } catch (err) {
+      return sendError(res, err.status || 500, err.code || 'DELETE_COMMENT_ERROR', err.message);
+    }
+  }
+
   async createComment(req, res) {
     try {
       const result = await feedService.createComment(
         req.user.sub,
-        req.validatedBody.content
+        req.validatedBody.content,
+        req.validatedBody.parentId ?? null
       );
       return sendSuccess(res, 200, result);
     } catch (err) {

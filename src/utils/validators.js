@@ -44,8 +44,17 @@ const changePasswordSchema = z.object({
   new_password: passwordSchema,
 });
 
-/** Schema for POST /feed (create comment) */
+/** Schema for POST /feed (create comment or reply) */
 const commentSchema = z.object({
+  content: z
+    .string()
+    .min(1, 'Comment content cannot be empty')
+    .max(1000, 'Comment cannot exceed 1000 characters'),
+  parentId: z.string().uuid('Invalid parentId format').optional(),
+});
+
+/** Schema for PUT /feed/:id (editar comentario) */
+const editCommentSchema = z.object({
   content: z
     .string()
     .min(1, 'Comment content cannot be empty')
@@ -57,4 +66,5 @@ module.exports = {
   loginSchema,
   changePasswordSchema,
   commentSchema,
+  editCommentSchema,
 };
