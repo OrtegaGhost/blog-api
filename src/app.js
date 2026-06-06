@@ -4,15 +4,22 @@ require('./config/env'); // Validate env vars at startup — fails fast if misco
 require('dotenv').config();
 
 const express = require('express');
-const helmet = require('helmet');
-const cors = require('cors');
+const helmet  = require('helmet');
+const cors    = require('cors');
 const rateLimit = require('express-rate-limit');
-const path = require('path');
+const morgan  = require('morgan');
+const path    = require('path');
 
 const routes = require('./routes');
 const { errorMiddleware } = require('./middlewares/error.middleware');
 
 const app = express();
+
+// ── HTTP request logging (OWASP A09 / ASVS V7) ───────────────────────────────
+// Skip in test environment to keep test output clean
+if (process.env.NODE_ENV !== 'test') {
+  app.use(morgan('combined'));
+}
 
 // ── Security headers (OWASP A05) ──────────────────────────────────────────────
 app.use(helmet());
