@@ -33,10 +33,13 @@ class AuthController {
    * Expects JSON body: { username, password }
    */
   async login(req, res) {
+    const { username } = req.validatedBody;
     try {
       const result = await authService.login(req.validatedBody);
+      console.log(`[AUTH] LOGIN_SUCCESS username=${username} ip=${req.ip}`);
       return sendSuccess(res, 200, result);
     } catch (err) {
+      console.warn(`[AUTH] LOGIN_FAILED username=${username} ip=${req.ip} reason=${err.code}`);
       return sendError(res, err.status || 500, err.code || 'LOGIN_ERROR', err.message);
     }
   }
@@ -81,12 +84,11 @@ class AuthController {
 
   async changePassword(req, res) {
     try {
-      const result = await authService.changePassword(
-        req.user.sub,
-        req.validatedBody
-      );
+      const result = await authService.changePassword(req.user.sub, req.validatedBody);
+      console.log(`[AUTH] PASSWORD_CHANGED userId=${req.user.sub} ip=${req.ip}`);
       return sendSuccess(res, 200, result);
     } catch (err) {
+      console.warn(`[AUTH] PASSWORD_CHANGE_FAILED userId=${req.user.sub} ip=${req.ip} reason=${err.code}`);
       return sendError(res, err.status || 500, err.code || 'CHANGE_PASSWORD_ERROR', err.message);
     }
   }
@@ -111,6 +113,7 @@ class AuthController {
   async deleteAccount(req, res) {
     try {
       await authService.deleteAccount(req.user.sub);
+      console.log(`[AUTH] ACCOUNT_DELETED userId=${req.user.sub} ip=${req.ip}`);
       return sendSuccess(res, 200, { message: 'Account deleted successfully' });
     } catch (err) {
       return sendError(res, err.status || 500, err.code || 'DELETE_ACCOUNT_ERROR', err.message);
@@ -135,10 +138,13 @@ class AuthController {
    * Public — verifies security answer and resets the password.
    */
   async resetPassword(req, res) {
+    const { username } = req.validatedBody;
     try {
       const result = await authService.resetPassword(req.validatedBody);
+      console.log(`[AUTH] PASSWORD_RESET username=${username} ip=${req.ip}`);
       return sendSuccess(res, 200, result);
     } catch (err) {
+      console.warn(`[AUTH] PASSWORD_RESET_FAILED username=${username} ip=${req.ip} reason=${err.code}`);
       return sendError(res, err.status || 500, err.code || 'RESET_ERROR', err.message);
     }
   }
