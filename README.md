@@ -748,8 +748,12 @@ blog-api/
 ## Git History
 
 ```
-*   46713c6 (HEAD -> main) Merge develop into main
+*   9815df4 (HEAD -> main) Merge develop into main
 |\
+| * 8f33d9b docs: update README — 62 tests, HttpOnly cookie auth, new endpoints, accurate security table
+* |   46713c6 Merge develop into main
+|\ \
+| |/
 | * be07f9c security: migrate JWT to HttpOnly cookie + expand test coverage to 62 tests
 * |   d0e311f Merge develop into main
 |\ \
@@ -758,7 +762,7 @@ blog-api/
 * |   703eab1 Merge develop into main
 |\ \
 | |/
-| * f89b6cc feat: add expires_in to login response (RFC 6749 §5.1)
+| * f89b6cc feat: add expires_in to login response (RFC 6749 §5.1) + update git log
 * |   27f691b Merge develop into main
 |\ \
 | |/
@@ -774,12 +778,20 @@ blog-api/
 * |   a119844 Merge branch 'develop'
 |\ \
 | |/
+| * c19e98d docs: update README with photo upload, name change and delete account endpoints
+* |   b18048d Merge branch 'develop'
+|\ \
+| |/
 | * f80aa94 feat: add PUT /me/name and DELETE /me endpoints
 * |   e7eb477 Merge branch 'develop'
 |\ \
 | |/
 | * 730ebb6 feat: add profile/cover photo upload endpoints and fix all tests
-* |   0e8ee27 merge: develop -> main (threading, edit/delete, profile page)
+* |   a3d75a9 merge: develop → main (README update)
+|\ \
+| |/
+| * a1e24fa docs: update README with threading, edit/delete and profile endpoints
+* |   0e8ee27 merge: develop → main (threading, edit/delete, profile page)
 |\ \
 | |/
 | * 1b4b680 feat: add comment threading, edit/delete endpoints and user profile
