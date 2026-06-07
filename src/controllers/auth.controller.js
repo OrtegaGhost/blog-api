@@ -36,12 +36,30 @@ class AuthController {
     const { username } = req.validatedBody;
     try {
       const result = await authService.login(req.validatedBody);
+      // Set JWT in HttpOnly cookie so JS cannot read it (ASVS V8.2.2)
+      res.cookie('access_token', result.access_token, {
+        httpOnly: true,
+        sameSite: 'lax',
+        maxAge: result.expires_in * 1000, // ms
+        path: '/',
+      });
       console.log(`[AUTH] LOGIN_SUCCESS username=${username} ip=${req.ip}`);
       return sendSuccess(res, 200, result);
     } catch (err) {
       console.warn(`[AUTH] LOGIN_FAILED username=${username} ip=${req.ip} reason=${err.code}`);
       return sendError(res, err.status || 500, err.code || 'LOGIN_ERROR', err.message);
     }
+  }
+
+  /**
+   * POST /logout
+   * Clears the HttpOnly auth cookie. No authentication required —
+   * this is intentionally idempotent (safe to call even with an expired token).
+   */
+  logout(req, res) {
+    res.clearCookie('access_token', { httpOnly: true, sameSite: 'lax', path: '/' });
+    console.log(`[AUTH] LOGOUT ip=${req.ip}`);
+    return sendSuccess(res, 200, { message: 'Logged out successfully' });
   }
 
   /**

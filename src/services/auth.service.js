@@ -119,7 +119,10 @@ class AuthService {
   async login({ username, password }) {
     const user = await prisma.user.findUnique({
       where: { username },
-      select: { id: true, username: true, password: true },
+      select: {
+        id: true, username: true, password: true,
+        name: true, email: true, profilePhoto: true, coverPhoto: true, createdAt: true,
+      },
     });
 
     // Use constant-time comparison to prevent user enumeration via timing attacks
@@ -142,9 +145,12 @@ class AuthService {
       { expiresIn: expirationSeconds, algorithm: 'HS256' }
     );
 
+    const { password: _pw, ...profile } = user;
+
     // expires_in follows RFC 6749 §5.1 (seconds until expiration)
     // expiration is kept for backwards compatibility (Unix timestamp)
-    return { token_type: 'Bearer', expires_in: expirationSeconds, expiration, access_token };
+    // user profile is included so the client doesn't need a separate /me call
+    return { token_type: 'Bearer', expires_in: expirationSeconds, expiration, access_token, user: profile };
   }
 
   /**

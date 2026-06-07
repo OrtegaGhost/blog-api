@@ -116,6 +116,12 @@ router.get(
 );
 
 /**
+ * POST /logout
+ * Public — clears the HttpOnly auth cookie. Idempotent (safe to call at any time).
+ */
+router.post('/logout', authController.logout.bind(authController));
+
+/**
  * POST /forgot-password
  * Public — verifies security answer and resets the password.
  */

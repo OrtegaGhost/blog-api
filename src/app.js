@@ -3,12 +3,13 @@
 require('./config/env'); // Validate env vars at startup — fails fast if misconfigured
 require('dotenv').config();
 
-const express = require('express');
-const helmet  = require('helmet');
-const cors    = require('cors');
-const rateLimit = require('express-rate-limit');
-const morgan  = require('morgan');
-const path    = require('path');
+const express      = require('express');
+const helmet       = require('helmet');
+const cors         = require('cors');
+const rateLimit    = require('express-rate-limit');
+const morgan       = require('morgan');
+const cookieParser = require('cookie-parser');
+const path         = require('path');
 
 const routes = require('./routes');
 const { errorMiddleware } = require('./middlewares/error.middleware');
@@ -39,12 +40,16 @@ app.use((_req, res, next) => {
   next();
 });
 
+// ── Cookie parser (required before routes to read HttpOnly auth cookie) ───────
+app.use(cookieParser());
+
 // ── CORS ─────────────────────────────────────────────────────────────────────
 app.use(
   cors({
     origin: (process.env.CORS_ORIGIN || 'http://localhost:5173').split(','),
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
+    credentials: true, // Required to send/receive cookies cross-origin
   })
 );
 
@@ -64,7 +69,7 @@ app.use(
   '/login',
   rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 10,
+    max: 30,
     message: { error: 'TOO_MANY_REQUESTS', message: 'Too many login attempts, try again later' },
   })
 );
