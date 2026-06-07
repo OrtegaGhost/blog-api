@@ -31,10 +31,11 @@ Built with Node.js + Express.js as part of a technical evaluation for profession
 | Framework | Express.js 5 |
 | Database | PostgreSQL 16 |
 | ORM | Prisma 6 |
-| Authentication | JWT (HS256) + bcrypt |
+| Authentication | JWT (HS256) + bcrypt + HttpOnly cookie |
 | Validation | Zod 4 |
 | Real-time | Socket.io 4 |
-| Security | Helmet · CORS · express-rate-limit |
+| Security | Helmet · CORS · express-rate-limit · cookie-parser |
+| Logging | Morgan (HTTP) + structured `[AUTH]` audit trail |
 | File upload | Multer 2 |
 | Testing | Jest 30 + Supertest |
 | Container | Docker + Docker Compose |
@@ -184,7 +185,7 @@ docker compose down -v
 
 ## API Reference
 
-All protected endpoints require the header:
+All protected endpoints require authentication. The browser client uses an **HttpOnly cookie** (`access_token`) set automatically by `POST /login`. API clients (curl, Postman, test suites) may use the header instead:
 
 ```
 Authorization: Bearer <access_token>
@@ -242,12 +243,24 @@ Authenticates a user and returns a JWT.
 | `400` | Missing username or password |
 | `401` | Wrong credentials |
 
+On success the server also sets an `HttpOnly; SameSite=Lax` cookie named `access_token` (valid for 24 h). Browser clients are authenticated automatically on every subsequent request via this cookie.
+
 ```json
 // 200
 {
   "token_type": "Bearer",
+  "expires_in": 86400,
   "expiration": 1749600000,
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "username": "johndoe",
+    "profilePhoto": "/uploads/abc123.webp",
+    "coverPhoto": null,
+    "createdAt": "2026-06-04T00:00:00.000Z"
+  }
 }
 ```
 
@@ -305,6 +318,71 @@ Updates the authenticated user's password.
 {
   "message": "Password updated successfully"
 }
+```
+
+---
+
+### `POST /logout`
+
+Clears the HttpOnly auth cookie. Idempotent — safe to call even with an expired token.
+
+**Responses:**
+
+| Status | Condition |
+|---|---|
+| `200` | Cookie cleared |
+
+```json
+// 200
+{ "message": "Logged out successfully" }
+```
+
+---
+
+### `GET /forgot-password/:username`
+
+Public endpoint — returns the security question key chosen at registration.
+
+**Responses:**
+
+| Status | Condition |
+|---|---|
+| `200` | User found |
+| `404` | Username not found |
+
+```json
+// 200
+{ "questionKey": "q0" }
+```
+
+Question keys map to: `q0` = first pet's name · `q1` = mother's maiden name · `q2` = childhood city · `q3` = favourite teacher · `q4` = favourite sports team.
+
+---
+
+### `POST /forgot-password`
+
+Public endpoint — verifies the security answer and resets the password.
+
+```json
+// Request body
+{
+  "username": "johndoe",
+  "securityAnswer": "Firulais",
+  "newPassword": "NewPassword1!"
+}
+```
+
+**Responses:**
+
+| Status | Condition |
+|---|---|
+| `200` | Password reset |
+| `400` | Wrong security answer or weak new password |
+| `404` | Username not found |
+
+```json
+// 200
+{ "message": "Password reset successfully" }
 ```
 
 ---
@@ -562,14 +640,28 @@ Returns server status. No authentication required.
 npm test
 ```
 
-Runs 23 tests covering all API scenarios defined in the evaluation spec:
+Runs **62 tests** across 3 suites covering all API scenarios:
 
-- `/login` — 200, 401, 400 (no username, no password, no data)
-- `/register` — 201, 400 (numbers in name, invalid email, missing data)
-- `/me` — 200, 400 (no header), 401 (invalid token)
-- `/change-password` — 200, 403 (no header), 401 (invalid token)
-- `GET /feed` — 200, 403 (no header), 401 (invalid token)
-- `POST /feed` — 200, 400 (empty content), 403 (no header), 401 (invalid token)
+**`auth.test.js` (41 tests)**
+- `POST /login` — 200, 401, 400 (missing fields)
+- `POST /register` — 201, 400 (invalid name/email/security question/missing fields)
+- `GET /me` — 200, 400 (no header), 401 (invalid token)
+- `PUT /change-password` — 200, 403, 401
+- `PUT /me/photo` — 200, 400 (no file), 403, 401
+- `PUT /me/cover` — 200, 400 (no file), 403, 401
+- `PUT /me/name` — 200, 400 (invalid/short/missing), 403, 401
+- `DELETE /me` — 200, 403, 401
+- `GET /forgot-password/:username` — 200, 404
+- `POST /forgot-password` — 200, 400 (wrong answer/weak password), 404
+
+**`feed.test.js` (19 tests)**
+- `GET /feed` — 200, 403, 401
+- `POST /feed` — 200, 400 (empty content), 403, 401
+- `PUT /feed/:id` — 200, 403 (non-owner), 404, 400 (empty content), 403 (no header), 401
+- `DELETE /feed/:id` — 200, 403 (non-owner), 404, 403 (no header), 401
+
+**`users.test.js` (4 tests)**
+- `GET /users/:username` — 200, 404, 403, 401
 
 **With coverage report:**
 
@@ -585,15 +677,15 @@ This API was designed following **OWASP TOP TEN 2025** and **OWASP ASVS Level 2*
 
 | Control | Implementation |
 |---|---|
-| Broken Access Control | JWT middleware on all protected routes |
-| Cryptographic Failures | bcrypt (12 rounds) + JWT HS256 with 32+ char secret |
+| Broken Access Control | JWT middleware on all protected routes; ownership check before edit/delete |
+| Cryptographic Failures | bcrypt (12 rounds) · JWT HS256 · HttpOnly cookie (ASVS V8.2.2 — token not in JS-accessible storage) |
 | Injection | Prisma ORM with parameterized queries (no raw SQL) |
-| Insecure Design | Rate limiting on `/login` (10 req/15 min) and `/register` (5 req/h) |
-| Security Misconfiguration | Helmet HTTP headers + CORS allowlist + `Cross-Origin-Resource-Policy: cross-origin` on `/uploads` |
+| Insecure Design | Rate limiting: `/login` (30 req/15 min), `/register` (5 req/h), global (100 req/15 min) |
+| Security Misconfiguration | Helmet + Permissions-Policy + Cache-Control: no-store + CORS allowlist + CORP on `/uploads` |
 | Vulnerable Components | Snyk analysis — 0 known vulnerabilities |
-| Auth Failures | Constant-time password comparison to prevent timing attacks |
+| Auth Failures | Constant-time bcrypt comparison · security question recovery with hashed answers |
 | Data Integrity | Zod validation on every request body |
-| Logging | No passwords or tokens logged |
+| Logging & Monitoring | Morgan HTTP access log + structured `[AUTH]` audit events (LOGIN, LOGOUT, PASSWORD_CHANGED, ACCOUNT_DELETED) |
 
 **Run Snyk analysis:**
 
@@ -641,8 +733,9 @@ blog-api/
 │   └── app.js                     # Express app (middleware + routes)
 ├── tests/
 │   ├── setup.js             # Test environment variables
-│   ├── auth.test.js         # Auth endpoint tests
-│   └── feed.test.js         # Feed endpoint tests
+│   ├── auth.test.js         # Auth endpoint tests (41 tests)
+│   ├── feed.test.js         # Feed endpoint tests — GET, POST, PUT /:id, DELETE /:id (19 tests)
+│   └── users.test.js        # Users endpoint tests — GET /users/:username (4 tests)
 ├── uploads/                 # Profile photos (gitignored)
 ├── .env.example
 ├── Dockerfile
@@ -655,8 +748,20 @@ blog-api/
 ## Git History
 
 ```
-*   27f691b (HEAD -> main) Merge develop into main
+*   46713c6 (HEAD -> main) Merge develop into main
 |\
+| * be07f9c security: migrate JWT to HttpOnly cookie + expand test coverage to 62 tests
+* |   d0e311f Merge develop into main
+|\ \
+| |/
+| * b483afb security: add HTTP logging (Morgan) and auth event audit trail
+* |   703eab1 Merge develop into main
+|\ \
+| |/
+| * f89b6cc feat: add expires_in to login response (RFC 6749 §5.1)
+* |   27f691b Merge develop into main
+|\ \
+| |/
 | * cbd694a security: add Permissions-Policy header and Cache-Control no-store
 * |   8858966 Merge develop into main
 |\ \
@@ -669,19 +774,11 @@ blog-api/
 * |   a119844 Merge branch 'develop'
 |\ \
 | |/
-| * c19e98d docs: update README with photo upload, name change and delete account endpoints
-* |   b18048d Merge branch 'develop'
-|\ \
-| |/
 | * f80aa94 feat: add PUT /me/name and DELETE /me endpoints
 * |   e7eb477 Merge branch 'develop'
 |\ \
 | |/
 | * 730ebb6 feat: add profile/cover photo upload endpoints and fix all tests
-* |   a3d75a9 merge: develop -> main (README update)
-|\ \
-| |/
-| * a1e24fa docs: update README with threading, edit/delete and profile endpoints
 * |   0e8ee27 merge: develop -> main (threading, edit/delete, profile page)
 |\ \
 | |/
@@ -689,7 +786,6 @@ blog-api/
 |/
 * 8fd2064 feat: convert uploaded images to WebP with sharp
 * 0db2605 fix: set Cross-Origin-Resource-Policy: cross-origin for /uploads
-* 3f5c5f1 docs: add comprehensive README with API reference and setup instructions
 * db5ed54 test: add Jest + Supertest suite covering all API scenarios
 * 839c185 feat: initial backend setup with full API implementation
 ```
